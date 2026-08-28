@@ -110,9 +110,16 @@ class contains no gateway wiring at all — everything is the dependency plus `a
 cd spring-llm-gateway-sample
 docker compose up -d ollama redis
 docker compose exec ollama ollama pull llama3.2
+cd ..
 
-cd .. && mvn -q -pl spring-llm-gateway-sample -am spring-boot:run
+# install the core module into your local repo once, then run just the sample
+mvn -q -DskipTests install
+mvn -q -pl spring-llm-gateway-sample spring-boot:run
 ```
+
+Do not add `-am` to the `spring-boot:run` line. It pulls the parent POM into the reactor and the
+plugin then runs against every module, failing with "Unable to find a suitable main class" on the
+parent. Either install first as above, or `cd spring-llm-gateway-sample && mvn spring-boot:run`.
 
 vLLM is behind the `gpu` compose profile because it needs an NVIDIA GPU and a large download. The
 sample degrades on purpose without it: a request for `llama-3.1-70b*` trips the circuit breaker
