@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM Gateway Console</title>
+<style>
+  :root {
+    --bg:#f7f7f8; --panel:#fff; --ink:#18181b; --muted:#71717a; --line:#e4e4e7;
+    --accent:#4f46e5; --ok:#15803d; --warn:#b45309; --err:#b91c1c; --code:#f4f4f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f0f11; --panel:#18181b; --ink:#f4f4f5; --muted:#a1a1aa; --line:#27272a;
+            --accent:#818cf8; --ok:#4ade80; --warn:#fbbf24; --err:#f87171; --code:#111113; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel); flex-wrap:wrap; }
+  header h1 { font-size:15px; margin:0; font-weight:650; letter-spacing:-.01em; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+  .dot.up { background:var(--ok); } .dot.down { background:var(--err); }
+  .status { color:var(--muted); font-size:12.5px; }
+  main { display:grid; grid-template-columns:minmax(320px,400px) 1fr; gap:16px; padding:16px 20px; align-items:start; }
+  @media (max-width:900px){ main{ grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .panel h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 12px; font-weight:650; }
+  label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; font-weight:550; }
+  input,textarea,select { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px;
+    background:var(--bg); color:var(--ink); font:inherit; font-size:13px; }
+  textarea { resize:vertical; min-height:72px; }
+  input:focus,textarea:focus,select:focus { outline:2px solid var(--accent); outline-offset:-1px; border-color:transparent; }
+  .row { display:flex; gap:10px; } .row > * { flex:1; }
+  .check { display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px; }
+  .check input { width:auto; }
+  button { padding:9px 14px; border-radius:7px; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); font:inherit; font-size:13px; font-weight:550; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); width:100%; margin-top:14px; }
+  button.primary:disabled { opacity:.55; cursor:not-allowed; }
+  .scenarios { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .scenarios button { font-size:12px; padding:6px 10px; }
+  .meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .chip { font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line);
+    background:var(--bg); color:var(--muted); font-variant-numeric:tabular-nums; }
+  .chip b { color:var(--ink); font-weight:600; }
+  .chip.ok{ border-color:var(--ok); color:var(--ok);} .chip.ok b{color:var(--ok);}
+  .chip.warn{ border-color:var(--warn); color:var(--warn);} .chip.warn b{color:var(--warn);}
+  .chip.err{ border-color:var(--err); color:var(--err);} .chip.err b{color:var(--err);}
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:12px;
+    overflow:auto; max-height:340px; font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
+    white-space:pre-wrap; word-break:break-word; margin:0; }
+  .tabs { display:flex; gap:4px; margin-bottom:10px; }
+  .tabs button { font-size:12px; padding:5px 11px; border-radius:6px; }
+  .tabs button[aria-selected="true"] { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .hint { font-size:12px; color:var(--muted); margin-top:10px; }
+  .out { min-height:64px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span>
+  <h1>LLM Gateway Console</h1>
+  <span class="status" id="status">checking…</span>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>Request</h2>
+
+    <label for="key">Virtual key <span style="text-transform:none">(<code>Authorization: Bearer …</code>)</span></label>
+    <input id="key" value="sk-demo-local-key" spellcheck="false">
+
+    <label for="model">Model</label>
+    <input id="model" value="qwen2.5:0.5b" spellcheck="false" list="models">
+    <datalist id="models">
+      <option value="qwen2.5:0.5b"><option value="llama3.2"><option value="llama-3.1-70b-instruct">
+    </datalist>
+
+    <label for="prompt">Prompt</label>
+    <textarea id="prompt">Name the capital of France in one word.</textarea>
+
+    <div class="row">
+      <div><label for="max">max_tokens</label><input id="max" type="number" value="40" min="1"></div>
+      <div><label for="path">Path</label><input id="path" value="/v1/chat/completions" spellcheck="false"></div>
+    </div>
+
+    <div class="check"><input type="checkbox" id="stream"><label for="stream" style="margin:0">Stream (SSE)</label></div>
+
+    <button class="primary" id="send">Send request</button>
+
+    <label style="margin-top:18px">Scenarios</label>
+    <div class="scenarios">
+      <button data-s="ok">Valid key</button>
+      <button data-s="bad">Bad key → 401</button>
+      <button data-s="forbidden">Not allowed → 403</button>
+      <button data-s="failover">Failover → 70B</button>
+      <button data-s="stream">Streaming</button>
+      <button data-s="quota">Exhaust quota → 429</button>
+    </div>
+    <p class="hint">Scenarios fill the form and send. “Exhaust quota” fires repeated requests until
+      the gateway answers 429.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Response</h2>
+    <div class="meta" id="meta"><span class="chip">idle</span></div>
+    <div class="tabs">
+      <button id="t-body" aria-selected="true">Body</button>
+      <button id="t-head" aria-selected="false">Headers</button>
+      <button id="t-req"  aria-selected="false">Sent</button>
+    </div>
+    <pre class="out" id="out">Send a request to see the response.</pre>
+  </section>
+</main>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const views = { body: "Send a request to see the response.", head: "", req: "" };
+  let tab = "body";
+
+  function paintTabs() {
+    for (const t of ["body", "head", "req"]) {
+      $("t-" + t).setAttribute("aria-selected", String(t === tab));
+    }
+    $("out").textContent = views[tab] || "(empty)";
+  }
+  for (const t of ["body", "head", "req"]) {
+    $("t-" + t).addEventListener("click", () => { tab = t; paintTabs(); });
+  }
+
+  function chips(items) {
+    $("meta").innerHTML = "";
+    for (const c of items) {
+      const el = document.createElement("span");
+      el.className = "chip" + (c.tone ? " " + c.tone : "");
+      el.innerHTML = c.label + " <b>" + c.value + "</b>";
+      $("meta").appendChild(el);
+    }
+  }
+
+  function toneFor(status) {
+    if (status >= 200 && status < 300) return "ok";
+    if (status === 429) return "warn";
+    return "err";
+  }
+
+  function buildBody() {
+    const b = {
+      model: $("model").value.trim(),
+      messages: [{ role: "user", content: $("prompt").value }],
+      max_tokens: Number($("max").value) || 40,
+    };
+    if ($("stream").checked) b.stream = true;
+    return b;
+  }
+
+  async function send() {
+    const body = buildBody();
+    views.req = JSON.stringify(body, null, 2);
+    $("send").disabled = true;
+    chips([{ label: "status", value: "…" }]);
+    const started = performance.now();
+
+    try {
+      const res = await fetch($("path").value, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + $("key").value.trim() },
+        body: JSON.stringify(body),
+      });
+
+      const hdr = [];
+      res.headers.forEach((v, k) => hdr.push(k + ": " + v));
+      views.head = hdr.sort().join("\n");
+
+      const info = [{ label: "status", value: res.status, tone: toneFor(res.status) }];
+      const limit = res.headers.get("x-ratelimit-limit-tokens");
+      const rem = res.headers.get("x-ratelimit-remaining-tokens");
+      const retry = res.headers.get("retry-after");
+
+      if (body.stream && res.ok && (res.headers.get("content-type") || "").includes("event-stream")) {
+        // Render frames as they arrive so time-to-first-token is visible, not just total time.
+        let text = "", ttft = null;
+        const reader = res.body.getReader(), dec = new TextDecoder();
+        tab = "body"; paintTabs();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (ttft === null) ttft = Math.round(performance.now() - started);
+          text += dec.decode(value, { stream: true });
+          views.body = text;
+          if (tab === "body") $("out").textContent = text;
+        }
+        const usage = (text.match(/"usage"\s*:\s*\{[^{}]*\}/g) || []).pop();
+        info.push({ label: "ttft", value: ttft + "ms" });
+        info.push({ label: "total", value: Math.round(performance.now() - started) + "ms" });
+        info.push({ label: "frames", value: (text.match(/^data:/gm) || []).length });
+        if (usage) {
+          const u = JSON.parse("{" + usage + "}").usage;
+          info.push({ label: "tokens", value: u.prompt_tokens + "+" + u.completion_tokens + "=" + u.total_tokens });
+        }
+      } else {
+        const text = await res.text();
+        let parsed = null;
+        try { parsed = JSON.parse(text); } catch (_) { /* not JSON: show raw */ }
+        views.body = parsed ? JSON.stringify(parsed, null, 2) : text;
+        info.push({ label: "time", value: Math.round(performance.now() - started) + "ms" });
+        if (parsed && parsed.usage) {
+          info.push({ label: "tokens", value: parsed.usage.prompt_tokens + "+" + parsed.usage.completion_tokens
+            + "=" + parsed.usage.total_tokens });
+        }
+        if (parsed && parsed.model) info.push({ label: "served", value: parsed.model });
+        if (parsed && parsed.error) info.push({ label: "error", value: parsed.error.code, tone: "err" });
+      }
+
+      if (limit) info.push({ label: "limit", value: limit });
+      if (rem !== null && rem !== undefined) info.push({ label: "remaining", value: rem });
+      if (retry) info.push({ label: "retry-after", value: retry + "s", tone: "warn" });
+      chips(info);
+    } catch (e) {
+      views.body = String(e) + "\n\nIs the gateway running on this origin?";
+      chips([{ label: "network", value: "failed", tone: "err" }]);
+    } finally {
+      $("send").disabled = false;
+      paintTabs();
+    }
+  }
+
+  $("send").addEventListener("click", send);
+
+  const scenarios = {
+    ok:        { key: "sk-demo-local-key",  model: "qwen2.5:0.5b", stream: false, prompt: "Name the capital of France in one word." },
+    bad:       { key: "sk-not-a-real-key",  model: "qwen2.5:0.5b", stream: false },
+    forbidden: { key: "sk-analytics-team",  model: "llama-3.1-70b-instruct", stream: false },
+    failover:  { key: "sk-demo-local-key",  model: "llama-3.1-70b-instruct", stream: false, prompt: "Reply with just: ok" },
+    stream:    { key: "sk-demo-local-key",  model: "qwen2.5:0.5b", stream: true,  prompt: "Count from 1 to 5." },
+  };
+
+  for (const btn of document.querySelectorAll(".scenarios button")) {
+    btn.addEventListener("click", async () => {
+      const name = btn.dataset.s;
+      if (name === "quota") return exhaust();
+      const s = scenarios[name];
+      $("key").value = s.key; $("model").value = s.model; $("stream").checked = s.stream;
+      if (s.prompt) $("prompt").value = s.prompt;
+      await send();
+    });
+  }
+
+  async function exhaust() {
+    $("key").value = "sk-analytics-team";
+    $("model").value = "qwen2.5:0.5b";
+    $("stream").checked = false;
+    $("max").value = 200;
+    let n = 0, log = "";
+    for (let i = 0; i < 25; i++) {
+      const res = await fetch($("path").value, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + $("key").value },
+        body: JSON.stringify(buildBody()),
+      });
+      n++;
+      const rem = res.headers.get("x-ratelimit-remaining-tokens");
+      log += "request " + n + ": HTTP " + res.status + "  remaining=" + rem + "\n";
+      if (res.status === 429) {
+        log += "\n" + JSON.stringify(await res.json(), null, 2);
+        chips([{ label: "status", value: 429, tone: "warn" },
+               { label: "after", value: n + " requests" },
+               { label: "retry-after", value: (res.headers.get("retry-after") || "?") + "s", tone: "warn" }]);
+        break;
+      }
+      await res.text();
+      if (i === 24) chips([{ label: "status", value: "no 429 in 25", tone: "warn" }]);
+    }
+    views.body = log; tab = "body"; paintTabs();
+  }
+
+  async function health() {
+    try {
+      const r = await fetch("/actuator/health");
+      const j = await r.json();
+      $("dot").className = "dot " + (j.status === "UP" ? "up" : "down");
+      const redis = j.components && j.components.redis ? " · redis " + j.components.redis.status : "";
+      $("status").textContent = "gateway " + j.status + redis;
+    } catch (_) {
+      $("dot").className = "dot down";
+      $("status").textContent = "gateway unreachable";
+    }
+  }
+  health(); setInterval(health, 10000);
+  paintTabs();
+})();
+</script>
+</body>
+</html>

@@ -21,6 +21,7 @@ already, so requests are passed through, not rewritten (beyond injecting `stream
 - [Features](#features)
 - [Configuration reference](#configuration-reference)
 - [Keycloak / OAuth2](#keycloak--oauth2)
+- [Security](#security)
 - [How it fits into the filter chain](#how-it-fits-into-the-filter-chain)
 - [Gotchas worth knowing](#gotchas-worth-knowing)
 - [Building](#building)
@@ -33,9 +34,9 @@ You already have a Spring Cloud Gateway app. Add one dependency:
 
 ```xml
 <dependency>
-  <groupId>io.github.llmgw</groupId>
+  <groupId>io.github.dockndevai</groupId>
   <artifactId>spring-llm-gateway-core</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
 </dependency>
 ```
 
@@ -290,6 +291,7 @@ All properties are under `llm.gateway`, with IDE completion from generated metad
 | `fallback.uri` | — | Secondary upstream base URI |
 | `fallback.model` | — | Model to rewrite to |
 | `fallback.upstream` | — | Credential for the fallback call |
+| `secrets.key` | — | Base64 AES-256 key decrypting `{cipher}` values; unset disables encryption |
 
 ---
 
@@ -328,6 +330,54 @@ let `LlmAuth` do the authorizing. The sample has one in `SampleSecurityConfigura
 
 Both modes share everything downstream: `LlmPrincipal` is the same type either way, so quotas,
 tenant tagging and the model allow-list behave identically.
+
+---
+
+## Security
+
+Full detail, including the threat model and a hardening checklist, is in
+**[SECURITY.md](SECURITY.md)**. The essentials:
+
+- **The caller's token never reaches the upstream.** `LlmAuth` strips the inbound `Authorization`
+  header unconditionally — including when the model maps to no upstream, and on the failover path.
+- **Hash client keys, don't encrypt them.** Use `sha256:<hex>`. The gateway only ever verifies a
+  presented key, never recovers it, so a one-way hash beats reversible encryption. Comparison is
+  timing-safe and does not short-circuit on the first match. (Raw SHA-256 is fine here *only*
+  because virtual keys are high-entropy random strings — never for anything user-chosen.)
+- **Encrypt upstream credentials**, which do have to be reversible.
+
+### Encrypting configuration values
+
+Values prefixed `{cipher}` are decrypted with AES-256-GCM — authenticated, with a fresh random IV
+per value, so tampering fails loudly and the same secret never encrypts to the same text twice.
+
+```bash
+java -cp spring-llm-gateway-core-0.1.0.jar \
+  io.github.dockndevai.gateway.security.AesGcmSecretCipher genkey
+```
+
+```bash
+java -cp spring-llm-gateway-core-0.1.0.jar \
+  io.github.dockndevai.gateway.security.AesGcmSecretCipher encrypt <base64Key> 'sk-real-upstream-key'
+```
+
+```yaml
+llm:
+  gateway:
+    secrets:
+      key: ${LLM_GATEWAY_SECRETS_KEY}     # from the environment, never from this file
+    upstreams:
+      vllm:
+        api-key: "{cipher}aBcD...=="
+```
+
+This protects secrets **at rest, not in memory** — a decrypted credential lives in the heap for the
+life of the process. It defends against a leaked `application.yml` or committed Git history; it is
+not a secret manager. For production, prefer injecting credentials from Vault, a cloud secret
+manager or a Kubernetes secret and leave `{cipher}` unused. A `{cipher}` value with no key
+configured fails at startup rather than being sent upstream literally.
+
+Swap in your own `SecretCipher` bean to delegate to a real KMS.
 
 ---
 
@@ -414,9 +464,31 @@ RSA-signed tokens against a locally served JWK set for real signature verificati
 > Building on JDK 23+ requires `-proc:full` for the configuration processor to run; the parent POM
 > sets it, so `llm.gateway.*` completion works in your IDE.
 
+### Releasing
+
+Publishing to Maven Central needs a Sonatype Central account, a verified `io.github.dockndevai`
+namespace, and a GPG key. The `release` profile carries everything else — sources jar, javadoc jar,
+signing and the Central publishing plugin — and is kept out of the default build so `mvn verify`
+stays fast and needs no key.
+
+```bash
+mvn -Prelease clean deploy
+```
+
+`autoPublish` is deliberately `false`: the upload is staged and validated, and you press publish in
+the portal yourself. **A published version can never be deleted or overwritten**, only superseded.
+Pushing a `v*` tag runs the same thing in CI.
+
+The sample module is excluded from publication — it is a runnable demo, not a library.
+
+### Changelog
+
+Release notes are in [CHANGELOG.md](CHANGELOG.md).
+
 ### Layout
 
 ```
 spring-llm-gateway-core/     the auto-configured library, no @SpringBootApplication
-spring-llm-gateway-sample/   runnable gateway + docker-compose
+spring-llm-gateway-sample/   runnable gateway + docker-compose + browser test console
+docs/                        long-form write-up
 ```
