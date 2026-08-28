@@ -50,7 +50,12 @@ import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
  * optional dependencies — micrometer, Redis, resilience4j, oauth2-resource-server — are each
  * guarded by {@code @ConditionalOnClass}, so none of them has to be on the classpath.
  */
-@AutoConfiguration(after = { GatewayAutoConfiguration.class, JacksonAutoConfiguration.class })
+@AutoConfiguration(after = { GatewayAutoConfiguration.class, JacksonAutoConfiguration.class },
+		// Referenced by name because oauth2-resource-server is optional. Ordering after it is
+		// required, not cosmetic: JwtAuthConfiguration consumes the ReactiveJwtDecoder that
+		// auto-configuration registers, and without this the decoder does not exist yet.
+		afterName = "org.springframework.boot.autoconfigure.security.oauth2.resource.reactive."
+				+ "ReactiveOAuth2ResourceServerAutoConfiguration")
 @ConditionalOnClass({ GlobalFilter.class, DispatcherHandler.class })
 @ConditionalOnProperty(prefix = LlmGatewayProperties.PREFIX, name = "enabled", matchIfMissing = true)
 @EnableConfigurationProperties(LlmGatewayProperties.class)
@@ -137,9 +142,16 @@ public class LlmGatewayAutoConfiguration {
 	@ConditionalOnProperty(prefix = LlmGatewayProperties.PREFIX + ".auth", name = "mode", havingValue = "jwt")
 	public static class JwtAuthConfiguration {
 
+		/**
+		 * Deliberately not {@code @ConditionalOnBean(ReactiveJwtDecoder.class)}. That backs the
+		 * bean off silently when no decoder is configured, and the context then fails several
+		 * beans later complaining that {@code PrincipalResolver} is missing, which points
+		 * nowhere useful. Requiring the decoder directly makes the failure name the thing that
+		 * is actually absent, so the fix — setting
+		 * {@code spring.security.oauth2.resourceserver.jwt.issuer-uri} — is obvious.
+		 */
 		@Bean
 		@ConditionalOnMissingBean
-		@ConditionalOnBean(ReactiveJwtDecoder.class)
 		public PrincipalResolver llmJwtPrincipalResolver(ReactiveJwtDecoder jwtDecoder,
 				LlmGatewayProperties properties) {
 			return new JwtPrincipalResolver(jwtDecoder, properties);
