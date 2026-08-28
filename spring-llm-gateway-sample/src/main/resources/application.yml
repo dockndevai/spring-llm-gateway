@@ -74,10 +74,19 @@ llm:
 
     upstreams:
       vllm:
-        # vLLM started with --api-key. Ollama needs no credential, so it has no entry.
+        # vLLM started with --api-key.
         api-key: ${VLLM_API_KEY:local-vllm-key}
         header: Authorization
         prefix: "Bearer "
+      # Ollama needs no credential. Declared anyway so the models below reference something
+      # real; with no api-key the filter simply strips the caller's Authorization header
+      # rather than forwarding a virtual key upstream.
+      ollama:
+        # No api-key: Ollama is unauthenticated, so the filter just strips the caller's
+        # Authorization header instead of forwarding a virtual key upstream. The header
+        # property is only here to give the binder a leaf - "ollama: {}" binds to nothing
+        # at all and the entry would silently not exist.
+        header: Authorization
 
     # Map keys containing dots need bracket notation, otherwise Spring reads them as nested
     # properties and the lookup by model name never matches.

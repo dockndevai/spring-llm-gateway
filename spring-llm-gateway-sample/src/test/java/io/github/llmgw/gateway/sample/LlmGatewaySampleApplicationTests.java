@@ -64,6 +64,14 @@ class LlmGatewaySampleApplicationTests {
 	}
 
 	@Test
+	void everyModelPointsAtADeclaredUpstream() {
+		this.properties.getModels()
+			.forEach((model, config) -> assertThat(this.properties.getUpstreams())
+				.as("model '%s' references upstream '%s'", model, config.getUpstream())
+				.containsKey(config.getUpstream()));
+	}
+
+	@Test
 	void hashedSampleKeyMatchesItsDocumentedSecret() {
 		assertThat(io.github.llmgw.gateway.auth.PropertiesApiKeyStore.hash("sk-analytics-team"))
 			.isEqualTo(this.properties.getAuth().getKeys().get("analytics").getSecret());
