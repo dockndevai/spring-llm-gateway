@@ -3,6 +3,8 @@
 LLM-gateway capabilities on top of **Spring Cloud Gateway Server WebFlux**: virtual keys, token
 quotas, usage metering and failover, for self-hosted OpenAI-compatible backends (vLLM, Ollama).
 
+![The console: one endpoint routing to local Ollama and an NVIDIA GPU cloud, with virtual keys enforced](https://raw.githubusercontent.com/dockndevai/spring-llm-gateway/main/docs/media/console-demo.gif)
+
 It is a library, not a fork. Routing, filters, retries and the circuit breaker stay Spring Cloud
 Gateway's; this adds the LLM-shaped pieces on top — a predicate that reads the `model` field, two
 route filters, two global filters and a fallback handler.

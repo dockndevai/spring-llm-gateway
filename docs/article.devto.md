@@ -3,6 +3,7 @@ title: "Filter Ordering Is the Whole Game: Building an LLM Gateway on Spring Clo
 published: false
 description: "Adding virtual keys, token quotas, usage metering and failover to Spring Cloud Gateway for self-hosted vLLM and Ollama - and the filter-ordering and reactive traps that only showed up at runtime."
 tags: java, spring, llm, architecture
+cover_image: https://raw.githubusercontent.com/dockndevai/spring-llm-gateway/main/docs/media/console-demo.gif
 canonical_url: https://github.com/dockndevai/spring-llm-gateway
 ---
 
@@ -20,6 +21,8 @@ existing gateway.
 
 The code is at [dockndevai/spring-llm-gateway](https://github.com/dockndevai/spring-llm-gateway).
 This post is about the parts that were harder than they looked.
+
+![One endpoint routing to local Ollama and an NVIDIA GPU cloud, with virtual keys enforced](https://raw.githubusercontent.com/dockndevai/spring-llm-gateway/main/docs/media/console-demo.gif)
 
 ## Counting requests is the wrong unit
 

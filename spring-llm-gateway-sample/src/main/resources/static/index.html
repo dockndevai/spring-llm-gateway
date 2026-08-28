@@ -289,6 +289,19 @@
   }
   health(); setInterval(health, 10000);
   paintTabs();
+
+  // Deep links: ?key=…&model=…&prompt=…&max=…&stream=1&path=…&run=1
+  // Lets a scenario be shared, bookmarked, or driven by a screenshot tool, and is how the
+  // demo in the README is captured.
+  (function applyQuery() {
+    const q = new URLSearchParams(location.search);
+    if (![...q.keys()].length) return;
+    const set = (param, el) => { if (q.has(param)) document.getElementById(el).value = q.get(param); };
+    set("key", "key"); set("model", "model"); set("prompt", "prompt");
+    set("max", "max"); set("path", "path");
+    if (q.has("stream")) $("stream").checked = q.get("stream") !== "0";
+    if (q.get("run") === "1") send();
+  })();
 })();
 </script>
 </body>

@@ -15,6 +15,8 @@ existing gateway.
 The code is at [dockndevai/spring-llm-gateway](https://github.com/dockndevai/spring-llm-gateway).
 This post is about the parts that were harder than they looked.
 
+![One endpoint routing to local Ollama and an NVIDIA GPU cloud, with virtual keys enforced](https://raw.githubusercontent.com/dockndevai/spring-llm-gateway/main/docs/media/console-demo.gif)
+
 ## Counting requests is the wrong unit
 
 The stock `RequestRateLimiter` counts requests. For LLM traffic that number means almost nothing —
