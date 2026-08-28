@@ -483,6 +483,12 @@ Pushing a `v*` tag runs the same thing in CI.
 
 The sample module is excluded from publication — it is a runnable demo, not a library.
 
+### Write-up
+
+The design notes behind this — filter ordering, the reactive traps, and the bugs that only
+showed up at runtime — are written up at
+[Filter Ordering Is the Whole Game](https://dockndev.medium.com/filter-ordering-is-the-whole-game-building-an-llm-gateway-on-spring-cloud-gateway-1370c83ace0c).
+
 ### Changelog
 
 Release notes are in [CHANGELOG.md](CHANGELOG.md).

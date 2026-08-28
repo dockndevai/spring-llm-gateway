@@ -4,7 +4,7 @@ published: false
 description: "Adding virtual keys, token quotas, usage metering and failover to Spring Cloud Gateway for self-hosted vLLM and Ollama - and the filter-ordering and reactive traps that only showed up at runtime."
 tags: java, spring, llm, architecture
 cover_image: https://raw.githubusercontent.com/dockndevai/spring-llm-gateway/main/docs/media/console-demo.gif
-canonical_url: https://github.com/dockndevai/spring-llm-gateway
+canonical_url: https://dockndev.medium.com/filter-ordering-is-the-whole-game-building-an-llm-gateway-on-spring-cloud-gateway-1370c83ace0c
 ---
 
 Every team that runs more than one self-hosted model eventually builds the same thing. Someone

@@ -10,6 +10,9 @@ account credentials, which stay with you.
 | `post-hackernews.md` | Hacker News | ~350 word comment | Link post to the repo, plus a first comment. Plain, no marketing register. |
 | `post-reddit.md` | r/java, r/SpringBoot, r/LocalLLaMA | ~450 words each | Text post. Two variants: engineering detail for the Java subs, self-hosting outcomes for r/LocalLLaMA. |
 
+**Live:** the Medium copy is the canonical one —
+<https://dockndev.medium.com/filter-ordering-is-the-whole-game-building-an-llm-gateway-on-spring-cloud-gateway-1370c83ace0c>
+
 ## Order matters
 
 Post to **one** platform first and let it be the canonical copy, then point the others at it.
