@@ -29,8 +29,12 @@ class LlmFailoverIntegrationTests {
 	/** Stands in for a healthy smaller model to fail over to. */
 	private static final StubUpstream SECONDARY = StubUpstream.start("ollama");
 
-	/** Nothing listens here, so the primary call fails immediately. */
-	private static final String DEAD_PRIMARY = "http://localhost:1";
+	/**
+	 * Nothing listens here, so the primary call is refused immediately. A port is bound and
+	 * released to be sure it is closed; port 1 is a poor stand-in because macOS routes it into
+	 * a DNS lookup that stalls for ten seconds instead of refusing.
+	 */
+	private static final String DEAD_PRIMARY = "http://localhost:" + DeadPort.find();
 
 	@Autowired
 	private WebTestClient webTestClient;
@@ -85,6 +89,20 @@ class LlmFailoverIntegrationTests {
 
 	@SpringBootApplication
 	static class TestApplication {
+
+	}
+
+	/** Binds a port and immediately releases it, so connections to it are refused. */
+	static final class DeadPort {
+
+		static int find() {
+			try (java.net.ServerSocket socket = new java.net.ServerSocket(0)) {
+				return socket.getLocalPort();
+			}
+			catch (java.io.IOException ex) {
+				throw new IllegalStateException("could not reserve a closed port", ex);
+			}
+		}
 
 	}
 

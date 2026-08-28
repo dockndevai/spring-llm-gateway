@@ -23,14 +23,26 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 						+ "org.springframework.boot.autoconfigure.security.oauth2.resource.reactive.ReactiveOAuth2ResourceServerAutoConfiguration" })
 class LlmFallbackWithoutSecondaryTests {
 
+	/** A port that was bound then released, so connections to it are refused immediately. */
+	private static final int DEAD_PORT = findDeadPort();
+
 	@Autowired
 	private WebTestClient webTestClient;
+
+	private static int findDeadPort() {
+		try (java.net.ServerSocket socket = new java.net.ServerSocket(0)) {
+			return socket.getLocalPort();
+		}
+		catch (java.io.IOException ex) {
+			throw new IllegalStateException("could not reserve a closed port", ex);
+		}
+	}
 
 	@DynamicPropertySource
 	static void props(DynamicPropertyRegistry registry) {
 		String routes = "spring.cloud.gateway.server.webflux.routes";
 		registry.add(routes + "[0].id", () -> "vllm-llama");
-		registry.add(routes + "[0].uri", () -> "http://localhost:1");
+		registry.add(routes + "[0].uri", () -> "http://localhost:" + DEAD_PORT);
 		registry.add(routes + "[0].predicates[0]", () -> "Path=/v1/**");
 		registry.add(routes + "[0].filters[0].name", () -> "LlmAuth");
 		// CircuitBreaker takes two args, so it needs the expanded form: its shortcut binds only
