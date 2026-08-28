@@ -55,7 +55,7 @@ public class PropertiesApiKeyStore implements ApiKeyStore {
 	}
 
 	private boolean matches(String configuredValue, byte[] presentedBytes, byte[] presentedSha) {
-		// A {cipher} secret is decrypted first; sha256: is preferred for client keys because a
+		// A {enc} secret is decrypted first; sha256: is preferred for client keys because a
 		// hash cannot be reversed even by whoever holds the encryption key.
 		String configured = this.cipher.decrypt(configuredValue);
 		if (configured.startsWith(SHA256_PREFIX)) {

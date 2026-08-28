@@ -17,8 +17,20 @@ package io.github.dockndevai.gateway.security;
  */
 public interface SecretCipher {
 
-	/** Marks a configuration value as encrypted. */
-	String CIPHER_PREFIX = "{cipher}";
+	/**
+	 * Marks a configuration value as encrypted.
+	 * <p>
+	 * Deliberately <em>not</em> {@code {cipher}}. That prefix is already owned by
+	 * spring-cloud-context, which is on the classpath transitively via the gateway starter: it
+	 * intercepts such properties while the environment is being prepared and hands them to its own
+	 * {@code TextEncryptor}, failing the application at startup with
+	 * "No decryption for FailsafeTextEncryptor" long before any gateway bean is created.
+	 * <p>
+	 * If you already use Spring Cloud Config's encryption, keep using {@code {cipher}} with
+	 * {@code encrypt.key} — it decrypts every property, including these, and this cipher is then
+	 * unnecessary. {@code {enc}} exists for deployments that do not.
+	 */
+	String CIPHER_PREFIX = "{enc}";
 
 	/**
 	 * Decrypt a configuration value.

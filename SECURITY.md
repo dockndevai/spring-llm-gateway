@@ -57,11 +57,11 @@ paths, and every configured key is compared on every lookup rather than returnin
 time does not reveal which key matched or how far a guess got.
 
 **Upstream credentials must be reversible**, since they are sent to the inference server. Those are
-what `{cipher}` encryption is for.
+what `{enc}` encryption is for.
 
 ## Encrypting configuration values
 
-Values prefixed `{cipher}` are decrypted with AES-256-GCM at startup.
+Values prefixed `{enc}` are decrypted with AES-256-GCM at startup.
 
 ```bash
 # generate a key — store it in a secret manager, never beside the values it decrypts
@@ -80,7 +80,7 @@ llm:
       key: ${LLM_GATEWAY_SECRETS_KEY}     # from the environment, never from this file
     upstreams:
       vllm:
-        api-key: "{cipher}aBcD...=="
+        api-key: "{enc}aBcD...=="
 ```
 
 GCM is authenticated: a tampered ciphertext fails to decrypt rather than silently yielding
@@ -92,11 +92,11 @@ the error message.
 for the life of the process; anyone who can read the process, take a heap dump, or obtain the key
 can recover it. It defends against a leaked `application.yml` or committed Git history — it is not
 a secret manager. **For production, prefer injecting credentials directly from Vault, a cloud
-secret manager, or a Kubernetes secret** and leave `{cipher}` unused. Encrypted config is the
+secret manager, or a Kubernetes secret** and leave `{enc}` unused. Encrypted config is the
 option for when you have nowhere better to put the value.
 
-If a `{cipher}` value is present but no key is configured, startup fails loudly. It never
-degrades to sending the literal `{cipher}...` string upstream.
+If a `{enc}` value is present but no key is configured, startup fails loudly. It never
+degrades to sending the literal `{enc}...` string upstream.
 
 ## Denial of service
 

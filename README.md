@@ -291,7 +291,7 @@ All properties are under `llm.gateway`, with IDE completion from generated metad
 | `fallback.uri` | — | Secondary upstream base URI |
 | `fallback.model` | — | Model to rewrite to |
 | `fallback.upstream` | — | Credential for the fallback call |
-| `secrets.key` | — | Base64 AES-256 key decrypting `{cipher}` values; unset disables encryption |
+| `secrets.key` | — | Base64 AES-256 key decrypting `{enc}` values; unset disables encryption |
 
 ---
 
@@ -348,7 +348,7 @@ Full detail, including the threat model and a hardening checklist, is in
 
 ### Encrypting configuration values
 
-Values prefixed `{cipher}` are decrypted with AES-256-GCM — authenticated, with a fresh random IV
+Values prefixed `{enc}` are decrypted with AES-256-GCM — authenticated, with a fresh random IV
 per value, so tampering fails loudly and the same secret never encrypts to the same text twice.
 
 ```bash
@@ -368,13 +368,13 @@ llm:
       key: ${LLM_GATEWAY_SECRETS_KEY}     # from the environment, never from this file
     upstreams:
       vllm:
-        api-key: "{cipher}aBcD...=="
+        api-key: "{enc}aBcD...=="
 ```
 
 This protects secrets **at rest, not in memory** — a decrypted credential lives in the heap for the
 life of the process. It defends against a leaked `application.yml` or committed Git history; it is
 not a secret manager. For production, prefer injecting credentials from Vault, a cloud secret
-manager or a Kubernetes secret and leave `{cipher}` unused. A `{cipher}` value with no key
+manager or a Kubernetes secret and leave `{enc}` unused. A `{enc}` value with no key
 configured fails at startup rather than being sent upstream literally.
 
 Swap in your own `SecretCipher` bean to delegate to a real KMS.

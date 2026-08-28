@@ -10,7 +10,7 @@ import org.springframework.util.StringUtils;
 
 /**
  * Turns an upstream's configured credential into the header to send, decrypting it if it is
- * stored in {@code {cipher}} form.
+ * stored in {@code {enc}} form.
  * <p>
  * Shared by the auth filter and the failover handler so that the rule "never forward the caller's
  * own token upstream" is implemented exactly once.

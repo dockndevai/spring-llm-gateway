@@ -498,12 +498,12 @@ public class LlmGatewayProperties {
 	public static class Secrets {
 
 		/**
-		 * Base64 encoded 32-byte AES-256 key used to decrypt {@code {cipher}...} values.
+		 * Base64 encoded 32-byte AES-256 key used to decrypt {@code {enc}...} values.
 		 * <p>
 		 * Supply this from the environment ({@code LLM_GATEWAY_SECRETS_KEY}) or a secret manager,
 		 * never from the same file as the values it decrypts — a key committed next to its
 		 * ciphertext protects nothing. Leave unset to disable encryption entirely, in which case
-		 * any {@code {cipher}} value fails fast at startup rather than being sent upstream
+		 * any {@code {enc}} value fails fast at startup rather than being sent upstream
 		 * literally.
 		 */
 		private String key;

@@ -68,7 +68,7 @@ import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
 public class LlmGatewayAutoConfiguration {
 
 	/**
-	 * Decrypts {@code {cipher}} configuration values. Falls back to a no-op that passes plaintext
+	 * Decrypts {@code {enc}} configuration values. Falls back to a no-op that passes plaintext
 	 * through when no key is set, so encryption is opt-in and can be adopted one value at a time.
 	 */
 	@Bean

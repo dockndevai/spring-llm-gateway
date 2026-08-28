@@ -42,7 +42,7 @@ First public release.
   `fallbackUri: forward:/__llm/fallback`, replaying the cached request body against a secondary
   upstream or a smaller model and streaming the response through. Returns an OpenAI-shaped 503 when
   no fallback is configured.
-- **Encrypted configuration values.** AES-256-GCM `SecretCipher` decrypting `{cipher}` prefixed
+- **Encrypted configuration values.** AES-256-GCM `SecretCipher` decrypting `{enc}` prefixed
   upstream credentials and virtual key secrets, with a CLI for generating a key and encrypting
   values. Fails fast when an encrypted value is present but no key is configured. See
   [SECURITY.md](SECURITY.md).
@@ -69,6 +69,13 @@ and each is covered by a regression test.
   when its `Mono` terminates, so handing the body to a `ServerResponse` to be written later
   produced a correct status and no content. Replaced with a `WebHandler` writing directly to the
   exchange.
+- Encrypted configuration values used a `{cipher}` prefix, which spring-cloud-context already owns.
+  That library is on the classpath transitively via the gateway starter and inspects properties for
+  the prefix while the environment is being prepared, so any application with an encrypted value in
+  its `application.yml` died at startup with "No decryption for FailsafeTextEncryptor" before a
+  single gateway bean was created. The prefix is now `{enc}`. The original test missed this because
+  `@DynamicPropertySource` supplies values *after* the environment is prepared; it now uses fixed
+  constants in `@SpringBootTest(properties=...)`, which reproduces the real startup path.
 - The sample's `models` referenced an `ollama` upstream that was never declared, because
   `ollama: {}` binds to no map entry at all — Spring's binder needs at least one leaf property.
 - The documented `mvn -pl spring-llm-gateway-sample -am spring-boot:run` failed with "Unable to find

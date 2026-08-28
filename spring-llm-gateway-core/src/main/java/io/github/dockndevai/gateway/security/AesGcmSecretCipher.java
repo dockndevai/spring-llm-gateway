@@ -20,7 +20,7 @@ import javax.crypto.spec.SecretKeySpec;
  * {@link SecureRandom} and prepended to the ciphertext, so encrypting the same value twice produces
  * different output — reusing an IV under GCM is catastrophic, so it is never derived or reused.
  * <p>
- * Wire format, base64 encoded after the {@code {cipher}} prefix:
+ * Wire format, base64 encoded after the {@code {enc}} prefix:
  * <pre>
  *   [ 12-byte IV ][ ciphertext ][ 16-byte GCM tag ]
  * </pre>
@@ -152,7 +152,7 @@ public class AesGcmSecretCipher implements SecretCipher {
 		System.err.println("""
 				usage:
 				  genkey                      generate a base64 AES-256 key
-				  encrypt <base64Key> <value> print the {cipher}... form for application.yml
+				  encrypt <base64Key> <value> print the {enc}... form for application.yml
 				  decrypt <base64Key> <value> print the plaintext, to verify a value""");
 		System.exit(2);
 	}
