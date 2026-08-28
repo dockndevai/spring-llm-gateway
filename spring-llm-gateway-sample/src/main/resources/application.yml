@@ -137,4 +137,4 @@ resilience4j:
 
 logging:
   level:
-    io.github.llmgw.gateway: INFO
+    io.github.dockndevai.gateway: INFO

@@ -5,9 +5,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>io.github.llmgw</groupId>
+    <groupId>io.github.dockndevai</groupId>
     <artifactId>spring-llm-gateway-parent</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
   </parent>
 
   <artifactId>spring-llm-gateway-sample</artifactId>
@@ -20,7 +20,7 @@
       standalone app needs nothing else to be a gateway.
     -->
     <dependency>
-      <groupId>io.github.llmgw</groupId>
+      <groupId>io.github.dockndevai</groupId>
       <artifactId>spring-llm-gateway-core</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -59,6 +59,28 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <properties>
+    <!-- The sample is a runnable demo, not a library. It has no business on Maven Central. -->
+    <maven.deploy.skip>true</maven.deploy.skip>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <configuration>
+              <skipPublishing>true</skipPublishing>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <build>
     <plugins>

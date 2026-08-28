@@ -11,13 +11,38 @@
     <relativePath/>
   </parent>
 
-  <groupId>io.github.llmgw</groupId>
+  <groupId>io.github.dockndevai</groupId>
   <artifactId>spring-llm-gateway-parent</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.1.0</version>
   <packaging>pom</packaging>
 
   <name>spring-llm-gateway-parent</name>
   <description>LLM gateway capabilities on top of Spring Cloud Gateway Server WebFlux</description>
+  <url>https://github.com/dockndevai/spring-llm-gateway</url>
+  <inceptionYear>2026</inceptionYear>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>dockndevai</id>
+      <name>Ankit Verma</name>
+      <url>https://github.com/dockndevai</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/dockndevai/spring-llm-gateway.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/dockndevai/spring-llm-gateway.git</developerConnection>
+    <url>https://github.com/dockndevai/spring-llm-gateway</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <modules>
     <module>spring-llm-gateway-core</module>
@@ -42,6 +67,82 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <profiles>
+    <!--
+      Everything Maven Central requires, kept out of the default build so day-to-day
+      "mvn verify" stays fast and needs no GPG key. Activate with -Prelease.
+    -->
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.4.0</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals><goal>jar-no-fork</goal></goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.12.0</version>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals><goal>jar</goal></goals>
+              </execution>
+            </executions>
+            <configuration>
+              <!-- Central requires a javadoc jar, not perfect javadoc. Do not fail the
+                   release on a missing @param in an internal class. -->
+              <doclint>none</doclint>
+              <quiet>true</quiet>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.8</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals><goal>sign</goal></goals>
+              </execution>
+            </executions>
+            <configuration>
+              <!-- Reads the passphrase from settings.xml rather than prompting, so the
+                   same command works locally and in CI. -->
+              <gpgArguments>
+                <arg>--pinentry-mode</arg>
+                <arg>loopback</arg>
+              </gpgArguments>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.11.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <!-- Must match a <server><id> in ~/.m2/settings.xml holding the
+                   Central portal user token. -->
+              <publishingServerId>central</publishingServerId>
+              <!-- Deliberately false: the upload is staged and validated, and you press
+                   publish in the portal. A published version can never be deleted. -->
+              <autoPublish>false</autoPublish>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <build>
     <pluginManagement>
