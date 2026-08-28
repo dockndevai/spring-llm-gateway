@@ -1,0 +1,72 @@
+# Local backends for the sample gateway.
+#
+#   docker compose up -d ollama redis
+#   docker compose exec ollama ollama pull llama3.2
+#
+# vLLM needs an NVIDIA GPU and a sizeable download, so it is behind the "gpu" profile and the
+# sample degrades gracefully without it: requests for llama-3.1-70b* trip the circuit breaker
+# and fail over to Ollama.
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: llmgw-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: llmgw-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: llmgw-vllm
+    profiles: ["gpu"]
+    ports:
+      - "8000:8000"
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ${HUGGING_FACE_HUB_TOKEN:-}
+    command:
+      - --model=meta-llama/Llama-3.1-70B-Instruct
+      - --served-model-name=llama-3.1-70b-instruct
+      # Must match llm.gateway.upstreams.vllm.api-key in application.yml.
+      - --api-key=local-vllm-key
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # Only needed for the "jwt" profile.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: llmgw-keycloak
+    profiles: ["jwt"]
+    ports:
+      - "8080:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    command: ["start-dev"]
+
+volumes:
+  ollama-models:
+  hf-cache:

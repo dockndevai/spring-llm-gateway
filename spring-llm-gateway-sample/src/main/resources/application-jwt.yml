@@ -1,0 +1,28 @@
+# Keycloak-issued virtual keys.
+#
+#   ./mvnw spring-boot:run -Dspring-boot.run.profiles=jwt
+#
+# Signature, issuer and expiry are checked by spring-security-oauth2-resource-server. The
+# gateway then reads entitlements off the token's claims, so revoking a client or changing its
+# budget happens in Keycloak rather than in this file.
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/llm}
+
+llm:
+  gateway:
+    auth:
+      mode: jwt
+      jwt:
+        # Add these to the client's token with Keycloak protocol mappers (User Attribute or
+        # Hardcoded Claim). Names are configurable so an existing realm convention can be reused.
+        tenant-claim: tenant
+        models-claim: llm_models
+        tokens-per-minute-claim: llm_tpm
+        principal-claim: sub
+        # Applied when a token carries no models claim at all.
+        default-models:
+          - llama3.2*

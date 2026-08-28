@@ -1,0 +1,131 @@
+spring:
+  application:
+    name: llm-gateway-sample
+
+  cloud:
+    gateway:
+      # Note the prefix: Spring Cloud Gateway 4.2 moved these from spring.cloud.gateway.* to
+      # spring.cloud.gateway.server.webflux.* when the WebFlux server was split out.
+      server:
+        webflux:
+          routes:
+            # Large model on vLLM. Selected on the model field of the request body, so a single
+            # client base-url fans out to different backends.
+            - id: vllm-llama
+              uri: ${LLM_VLLM_URI:http://localhost:8000}
+              predicates:
+                - Path=/v1/**
+                - LlmModel=llama-3.1-70b*
+              filters:
+                # Order matters and is taken from this list: auth resolves the principal that
+                # quota buckets on, and the circuit breaker should wrap only the upstream call.
+                - LlmAuth
+                - LlmQuota
+                - name: CircuitBreaker
+                  args:
+                    name: vllm
+                    fallbackUri: forward:/__llm/fallback
+
+            # Small models on Ollama.
+            - id: ollama-small
+              uri: ${LLM_OLLAMA_URI:http://localhost:11434}
+              predicates:
+                - Path=/v1/**
+                - LlmModel=llama3.2*,qwen2.5*
+              filters:
+                - LlmAuth
+                - LlmQuota
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+
+llm:
+  gateway:
+    auth:
+      # static = virtual keys from this file. Run with --spring.profiles.active=jwt for Keycloak.
+      mode: static
+      keys:
+        # Development style: the secret in plaintext.
+        demo:
+          secret: sk-demo-local-key
+          tenant: demo
+          models:
+            - "*"
+          tokens-per-minute: 120000
+        # Production style: only the hash is stored. This is sha256 of "sk-analytics-team".
+        analytics:
+          secret: sha256:7d877d00d0f7e0e999e7a8ef5812531f1fe6a80a086640a275fa1e56a525334b
+          tenant: analytics
+          models:
+            - llama3.2*
+            - qwen2.5*
+          tokens-per-minute: 20000
+
+    upstreams:
+      vllm:
+        # vLLM started with --api-key. Ollama needs no credential, so it has no entry.
+        api-key: ${VLLM_API_KEY:local-vllm-key}
+        header: Authorization
+        prefix: "Bearer "
+
+    # Map keys containing dots need bracket notation, otherwise Spring reads them as nested
+    # properties and the lookup by model name never matches.
+    models:
+      "[llama-3.1-70b-instruct]":
+        upstream: vllm
+        prompt-cost-per1k: 0.0009
+        completion-cost-per1k: 0.0009
+      "[llama3.2]":
+        upstream: ollama
+        prompt-cost-per1k: 0.0
+        completion-cost-per1k: 0.0
+      "[qwen2.5]":
+        upstream: ollama
+
+    quota:
+      enabled: true
+      # Switch to redis, with spring.data.redis pointing at a server, to share buckets across
+      # gateway instances instead of dividing the budget between them.
+      backend: memory
+      chars-per-token: 4.0
+      default-max-tokens: 512
+      defaults:
+        tokens-per-minute: 60000
+
+    metering:
+      enabled: true
+      inject-stream-usage: true
+      tail-buffer-size: 8192
+
+    # Where a tripped circuit breaker replays the request.
+    fallback:
+      uri: ${LLM_OLLAMA_URI:http://localhost:11434}
+      model: llama3.2
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      vllm:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 20s
+  timelimiter:
+    instances:
+      vllm:
+        # Generation is slow; the 1s default would trip on healthy traffic.
+        timeout-duration: 120s
+
+logging:
+  level:
+    io.github.llmgw.gateway: INFO

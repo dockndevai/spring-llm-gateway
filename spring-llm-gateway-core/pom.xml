@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.github.llmgw</groupId>
+    <artifactId>spring-llm-gateway-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>spring-llm-gateway-core</artifactId>
+  <name>spring-llm-gateway-core</name>
+  <description>Auto-configured LLM gateway filters, predicates and metering for Spring Cloud Gateway Server WebFlux</description>
+
+  <dependencies>
+    <!-- The gateway itself. Brings in spring-boot-starter-webflux transitively. -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-gateway-server-webflux</artifactId>
+    </dependency>
+
+    <!-- Optional: Keycloak / OIDC virtual keys (auth.mode=jwt) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- Optional: metrics -->
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-core</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- Optional: distributed token buckets -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!-- Optional: circuit breaker driven failover -->
+    <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-circuitbreaker-reactor-resilience4j</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+
+    <!--
+      test: the optional dependencies above are already on this module's own test classpath;
+      <optional> only stops them propagating to consumers.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>
