@@ -466,6 +466,26 @@ RSA-signed tokens against a locally served JWK set for real signature verificati
 > Building on JDK 23+ requires `-proc:full` for the configuration processor to run; the parent POM
 > sets it, so `llm.gateway.*` completion works in your IDE.
 
+### Running it as a container
+
+A multi-stage `Dockerfile` at the repository root builds the sample gateway. The dependency
+layer is resolved from the POMs alone, so a source-only change rebuilds in seconds instead of
+re-downloading Spring Cloud Gateway.
+
+```bash
+docker build -t spring-llm-gateway:0.1.0 .
+```
+
+```bash
+docker compose -f spring-llm-gateway-sample/docker-compose.yml --profile gateway up -d
+```
+
+That brings up the gateway together with Ollama and Redis. Inside the compose network the
+upstreams are service names (`http://ollama:11434`), not `localhost` — a container's loopback is
+its own, which is the usual reason a working local config fails once containerised.
+
+The image runs as a non-root user and carries a health check against `/actuator/health`.
+
 ### Releasing
 
 Publishing to Maven Central needs a Sonatype Central account, a verified `io.github.dockndevai`

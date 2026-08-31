@@ -1,0 +1,7 @@
+target/
+**/target/
+.git/
+.github/
+docs/
+*.md
+.idea/

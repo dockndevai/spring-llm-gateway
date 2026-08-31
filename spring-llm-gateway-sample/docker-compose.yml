@@ -7,6 +7,30 @@
 # sample degrades gracefully without it: requests for llama-3.1-70b* trip the circuit breaker
 # and fail over to Ollama.
 services:
+  # The gateway itself, built from the Dockerfile at the repository root. Bring the whole
+  # stack up with:  docker compose --profile gateway up -d
+  # Left behind a profile so "docker compose up -d ollama redis" stays a fast path for
+  # running the gateway from your IDE against containerised backends.
+  gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: spring-llm-gateway:0.1.0
+    container_name: llmgw-gateway
+    profiles: ["gateway"]
+    depends_on:
+      ollama:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      # Service names, not localhost: inside the compose network there is no host loopback.
+      LLM_OLLAMA_URI: http://ollama:11434
+      LLM_VLLM_URI: http://vllm:8000
+      SPRING_DATA_REDIS_HOST: redis
+    ports:
+      - "8080:8080"
+
   ollama:
     image: ollama/ollama:latest
     container_name: llmgw-ollama
