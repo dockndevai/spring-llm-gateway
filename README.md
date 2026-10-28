@@ -201,6 +201,11 @@ Over budget gives a 429 with `Retry-After` and an OpenAI-shaped body, plus
 refill-and-consume step is a single Lua script, so two instances cannot both see a full bucket.
 The Redis backend fails open if Redis is unreachable.
 
+Routes with a `LlmQuota` override have separate budgets per principal and route; routes without
+an override share the principal's budget. Upgrading to this version starts fresh quota buckets,
+including in Redis. Deploy gateway instances together to avoid temporarily enforcing separate
+old and new budgets during a rolling upgrade.
+
 ### 4. Usage metering and metrics
 
 A global filter wraps the response in a `ServerHttpResponseDecorator` and observes chunks with

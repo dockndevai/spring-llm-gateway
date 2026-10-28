@@ -72,6 +72,14 @@ public final class LlmRequestParser {
 		}
 		chars += textLength(root.get("prompt"));
 		chars += textLength(root.get("input"));
+		chars += textLength(root.get("system"));
+		chars += textLength(root.get("instructions"));
+		for (String field : new String[] { "tools", "functions" }) {
+			JsonNode node = root.get(field);
+			if (node != null && !node.isNull()) {
+				chars += node.toString().length();
+			}
+		}
 		return chars;
 	}
 
@@ -87,9 +95,12 @@ public final class LlmRequestParser {
 			for (JsonNode child : node) {
 				// Multimodal parts: {"type":"text","text":"..."}. Image parts contribute no
 				// characters; their token cost is not knowable from the body anyway.
-				total += child.isTextual() ? child.asText().length() : textLength(child.get("text"));
+				total += textLength(child);
 			}
 			return total;
+		}
+		if (node.isObject()) {
+			return textLength(node.get("text")) + textLength(node.get("content"));
 		}
 		return 0;
 	}

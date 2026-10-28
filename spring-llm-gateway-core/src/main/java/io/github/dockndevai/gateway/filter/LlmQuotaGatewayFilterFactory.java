@@ -16,8 +16,11 @@ import io.github.dockndevai.gateway.support.OpenAiError;
 
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.cloud.gateway.route.Route;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ServerWebExchange;
+
+import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR;
 
 /**
  * Token-per-minute quotas, as opposed to the request-per-minute limiting the stock
@@ -73,7 +76,7 @@ public class LlmQuotaGatewayFilterFactory extends AbstractGatewayFilterFactory<L
 						+ "'. List LlmAuth before LlmQuota to bucket per key.");
 			}
 
-			String bucketKey = (principal != null) ? principal.id() : ANONYMOUS;
+			String bucketKey = bucketKey(exchange, config, principal);
 			long limit = limitFor(config, principal, quota);
 			long estimate = estimate(exchange.getAttribute(LlmAttributes.LLM_REQUEST_ATTR), quota);
 
@@ -82,6 +85,16 @@ public class LlmQuotaGatewayFilterFactory extends AbstractGatewayFilterFactory<L
 						? proceed(exchange, chain, bucketKey, limit, estimate, decision)
 						: reject(exchange, decision));
 		};
+	}
+
+	private String bucketKey(ServerWebExchange exchange, Config config, LlmPrincipal principal) {
+		String principalId = (principal != null) ? principal.id() : ANONYMOUS;
+		String key = "p:" + principalId.length() + ":" + principalId;
+		if (config.getTokensPerMinute() != null) {
+			Route route = exchange.getRequiredAttribute(GATEWAY_ROUTE_ATTR);
+			return key + ":r:" + route.getId();
+		}
+		return key;
 	}
 
 	private Mono<Void> proceed(ServerWebExchange exchange,

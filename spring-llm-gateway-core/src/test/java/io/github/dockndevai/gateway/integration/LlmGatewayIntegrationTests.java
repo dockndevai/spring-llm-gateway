@@ -68,6 +68,17 @@ class LlmGatewayIntegrationTests {
 		registry.add(routes + "[1].filters[0]", () -> "LlmAuth");
 		registry.add(routes + "[1].filters[1]", () -> "LlmQuota");
 
+		registry.add(routes + "[2].id", () -> "quota-a");
+		registry.add(routes + "[2].uri", VLLM::uri);
+		registry.add(routes + "[2].predicates[0]", () -> "Path=/quota-a");
+		registry.add(routes + "[2].filters[0]", () -> "LlmAuth");
+		registry.add(routes + "[2].filters[1]", () -> "LlmQuota=100");
+		registry.add(routes + "[3].id", () -> "quota-b");
+		registry.add(routes + "[3].uri", VLLM::uri);
+		registry.add(routes + "[3].predicates[0]", () -> "Path=/quota-b");
+		registry.add(routes + "[3].filters[0]", () -> "LlmAuth");
+		registry.add(routes + "[3].filters[1]", () -> "LlmQuota=200");
+
 		registry.add("llm.gateway.upstreams.vllm.api-key", () -> "real-vllm-key");
 		// Model ids contain dots, so the map key needs bracket notation; dotted form would be
 		// read as nested properties and never match the model in the request body.
@@ -89,6 +100,13 @@ class LlmGatewayIntegrationTests {
 		registry.add("llm.gateway.auth.keys.tiny.secret", () -> "sk-tiny");
 		registry.add("llm.gateway.auth.keys.tiny.models[0]", () -> "*");
 		registry.add("llm.gateway.auth.keys.tiny.tokens-per-minute", () -> "600");
+		registry.add("llm.gateway.auth.keys.routes.secret", () -> "sk-routes");
+		registry.add("llm.gateway.auth.keys.routes.models[0]", () -> "*");
+		registry.add("llm.gateway.auth.keys.shared.secret", () -> "sk-shared");
+		registry.add("llm.gateway.auth.keys.shared.models[0]", () -> "*");
+		registry.add("llm.gateway.auth.keys.shared.tokens-per-minute", () -> "600");
+		registry.add("llm.gateway.auth.keys.tools.secret", () -> "sk-tools");
+		registry.add("llm.gateway.auth.keys.tools.models[0]", () -> "*");
 
 		registry.add("llm.gateway.quota.default-max-tokens", () -> "500");
 	}
@@ -119,6 +137,49 @@ class LlmGatewayIntegrationTests {
 		return """
 				{"model":"%s","stream":%s,"max_tokens":16,
 				 "messages":[{"role":"user","content":"hello there"}]}""".formatted(model, stream);
+	}
+
+	@Test
+	void routeOverridesUseIndependentBudgets() {
+		for (String path : List.of("/quota-a", "/quota-b")) {
+			this.webTestClient.post().uri(path)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer sk-routes")
+				.contentType(MediaType.APPLICATION_JSON)
+				.bodyValue("{\"max_tokens\":" + (path.equals("/quota-a") ? 90 : 180) + "}")
+				.exchange().expectStatus().isOk();
+		}
+		// The upstream reports 26 tokens, so reconciliation returns most of the reservation.
+		this.webTestClient.post().uri("/quota-a")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer sk-routes")
+			.contentType(MediaType.APPLICATION_JSON)
+			.bodyValue("{\"max_tokens\":60}")
+			.exchange().expectStatus().isOk();
+		this.webTestClient.post().uri("/quota-a")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer sk-routes")
+			.contentType(MediaType.APPLICATION_JSON)
+			.bodyValue("{\"max_tokens\":90}")
+			.exchange().expectStatus().isEqualTo(429);
+	}
+
+	@Test
+	void routesWithoutOverridesShareThePrincipalBudget() {
+		String greedy = """
+				{"model":"llama-3.1-70b-instruct","max_tokens":590,
+				 "messages":[{"role":"user","content":"hello there"}]}""";
+		post("sk-shared", greedy).expectStatus().isOk();
+		post("sk-shared", greedy.replace("llama-3.1-70b-instruct", "mixtral-8x7b"))
+			.expectStatus().isEqualTo(429);
+	}
+
+	@Test
+	void toolDefinitionsCountAgainstTheReservation() {
+		String body = "{\"max_tokens\":1,\"tools\":[{\"description\":\"" + "x".repeat(20000) + "\"}]}";
+		this.webTestClient.post().uri("/quota-a")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer sk-tools")
+			.contentType(MediaType.APPLICATION_JSON)
+			.bodyValue(body)
+			.exchange().expectStatus().isEqualTo(429);
+		assertThat(VLLM.received()).isEmpty();
 	}
 
 	@Test
